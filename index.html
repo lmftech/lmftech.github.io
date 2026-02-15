@@ -1,0 +1,1879 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MINDNOTE</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        #toolbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 12px 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 1000;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        #logo {
+            font-size: 22px;
+            font-weight: bold;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-right: auto;
+            user-select: none;
+        }
+
+        #formatting-toolbar {
+            position: fixed;
+            top: 64px;
+            left: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 10px 15px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            z-index: 999;
+            border-radius: 8px;
+            display: none;
+            gap: 8px;
+            align-items: center;
+        }
+
+        #formatting-toolbar.show {
+            display: flex;
+        }
+
+        .format-btn {
+            padding: 6px 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            background: white;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .format-btn:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+        }
+
+        .format-btn.active {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        .toolbar-btn {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: none;
+            border-radius: 8px;
+            background: white;
+            border: 2px solid #e5e7eb;
+            cursor: pointer;
+            font-size: 20px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: none;
+        }
+
+        .toolbar-btn:hover {
+            background: #f3f4f6;
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+
+        .toolbar-btn:active {
+            transform: translateY(0);
+        }
+
+        #layoutMode {
+            width: 40px;
+            height: 40px;
+            padding: 0;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-size: 18px;
+            text-align: center;
+            appearance: none;
+            -webkit-appearance: none;
+        }
+
+        #layoutMode:hover {
+            border-color: #667eea;
+            background: #f3f4f6;
+        }
+
+        .snap-checkbox {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border: 2px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .snap-checkbox:hover {
+            border-color: #667eea;
+            background: #f3f4f6;
+        }
+
+        .snap-checkbox input {
+            cursor: pointer;
+            width: 20px;
+            height: 20px;
+            margin: 0;
+        }
+
+        #canvas-container {
+            position: fixed;
+            top: 64px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: scroll;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
+        }
+
+        #canvas {
+            position: relative;
+            min-width: 100%;
+            min-height: 100%;
+            background: white;
+            cursor: grab;
+            touch-action: pan-x pan-y;
+        }
+
+        #canvas.show-grid {
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e7eb 19px, #e5e7eb 20px),
+                repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e7eb 19px, #e5e7eb 20px);
+            background-size: 20px 20px;
+        }
+
+        #canvas:active {
+            cursor: grabbing;
+        }
+
+        .node {
+            position: absolute;
+            min-width: 150px;
+            max-width: 300px;
+            padding: 15px 20px;
+            background: #fff;
+            border: 3px solid #667eea;
+            border-radius: 50px;
+            cursor: move;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: box-shadow 0.3s;
+            z-index: 10;
+            touch-action: none;
+        }
+
+        .node:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.25);
+        }
+
+        .node.selected {
+            border-color: #ffd700;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+        }
+
+        .node-content {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .node-text {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 14px;
+            text-align: center;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+            overflow: hidden;
+        }
+
+        .node-buttons {
+            display: flex;
+            gap: 5px;
+            justify-content: center;
+            margin-top: 5px;
+        }
+
+        .node-btn {
+            width: 24px;
+            height: 24px;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .add-btn {
+            background: #4ade80;
+            color: white;
+        }
+
+        .add-btn:hover {
+            background: #22c55e;
+            transform: scale(1.1);
+        }
+
+        .sibling-btn {
+            background: #60a5fa;
+            color: white;
+        }
+
+        .sibling-btn:hover {
+            background: #3b82f6;
+            transform: scale(1.1);
+        }
+
+        .delete-btn {
+            background: #f87171;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #ef4444;
+            transform: scale(1.1);
+        }
+
+        .text-field {
+            position: absolute;
+            min-width: 100px;
+            max-width: 250px;
+            padding: 10px;
+            background: #fffbeb;
+            border: 2px solid #fbbf24;
+            border-radius: 8px;
+            cursor: move;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            z-index: 10;
+        }
+
+        .text-field-content {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 13px;
+            outline: none;
+            font-family: inherit;
+            resize: none;
+            overflow: hidden;
+        }
+
+        .text-field-delete {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #ef4444;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-size: 12px;
+            display: none;
+        }
+
+        .text-field:hover .text-field-delete {
+            display: block;
+        }
+
+        svg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .context-menu {
+            position: fixed;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            z-index: 10000;
+            padding: 8px 0;
+            min-width: 150px;
+        }
+
+        .context-menu-item {
+            padding: 10px 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+
+        .context-menu-item:hover {
+            background: #f3f4f6;
+        }
+
+        .color-indicator {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #ddd;
+        }
+
+        #instructions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            max-width: 300px;
+            font-size: 12px;
+            z-index: 1000;
+        }
+
+        #instructions h3 {
+            margin-bottom: 10px;
+            color: #667eea;
+        }
+
+        #instructions ul {
+            list-style: none;
+            line-height: 1.6;
+        }
+
+        #instructions li:before {
+            content: "→ ";
+            color: #667eea;
+            font-weight: bold;
+        }
+
+        #pdf-preview-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 10000;
+            padding: 20px;
+        }
+
+        #pdf-preview-modal.show {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #pdf-preview-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow: auto;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+
+        #pdf-preview-canvas {
+            position: relative;
+            background: white;
+            border: 1px solid #ddd;
+            margin: 20px auto;
+        }
+
+        #pdf-preview-canvas.show-grid {
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 19px, #e5e7eb 19px, #e5e7eb 20px),
+                repeating-linear-gradient(90deg, transparent, transparent 19px, #e5e7eb 19px, #e5e7eb 20px);
+            background-size: 20px 20px;
+        }
+
+        .pdf-node {
+            position: absolute;
+            padding: 15px 20px;
+            background: #fff;
+            border: 3px solid #667eea;
+            border-radius: 50px;
+            cursor: move;
+            user-select: none;
+        }
+
+        .pdf-text-field {
+            position: absolute;
+            padding: 10px;
+            background: #fffbeb;
+            border: 2px solid #fbbf24;
+            border-radius: 8px;
+            cursor: move;
+            user-select: none;
+        }
+
+        #pdf-buttons {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            margin-top: 20px;
+        }
+
+        .pdf-btn {
+            padding: 12px 30px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .pdf-btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .pdf-btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .pdf-btn-secondary {
+            background: #e5e7eb;
+            color: #374151;
+        }
+
+        .pdf-btn-secondary:hover {
+            background: #d1d5db;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <div id="toolbar">
+        <div id="logo">MINDNOTE</div>
+        <button class="toolbar-btn" onclick="addTextField()" title="Textfeld hinzufügen">📝</button>
+        <select id="layoutMode" class="toolbar-btn" onchange="changeLayoutMode()" title="Layout wechseln">
+            <option value="org">🌳</option>
+            <option value="mindmap">🌐</option>
+        </select>
+        <label class="snap-checkbox" title="Einrasten">
+            <input type="checkbox" id="snapToGrid" onchange="toggleSnapToGrid()">
+        </label>
+        <button class="toolbar-btn" onclick="zoomOut()" title="Rauszoomen">➖</button>
+        <button class="toolbar-btn" onclick="zoomIn()" title="Reinzoomen">➕</button>
+        <button class="toolbar-btn" onclick="resetZoom()" title="Zoom zurücksetzen">🔍</button>
+        <button class="toolbar-btn" onclick="saveMap()" title="Speichern">💾</button>
+        <button class="toolbar-btn" onclick="loadMap()" title="Laden">📂</button>
+        <button class="toolbar-btn" onclick="exportImage()" title="Als PDF exportieren">📄</button>
+        <button class="toolbar-btn" onclick="clearCanvas()" title="Alles löschen">🗑️</button>
+    </div>
+
+    <div id="formatting-toolbar">
+        <select id="fontFamily" class="format-btn" onchange="applyFormatting()">
+            <option value="'Segoe UI', sans-serif">Segoe UI</option>
+            <option value="Arial, sans-serif">Arial</option>
+            <option value="'Times New Roman', serif">Times New Roman</option>
+            <option value="'Courier New', monospace">Courier New</option>
+            <option value="Georgia, serif">Georgia</option>
+            <option value="Verdana, sans-serif">Verdana</option>
+            <option value="'Comic Sans MS', cursive">Comic Sans</option>
+        </select>
+        
+        <select id="fontSize" class="format-btn" onchange="applyFormatting()">
+            <option value="12px">12</option>
+            <option value="14px" selected>14</option>
+            <option value="16px">16</option>
+            <option value="18px">18</option>
+            <option value="20px">20</option>
+            <option value="24px">24</option>
+            <option value="28px">28</option>
+            <option value="32px">32</option>
+        </select>
+
+        <button class="format-btn" onclick="toggleBold()" id="boldBtn" title="Fett (Cmd+B)"><b>B</b></button>
+        <button class="format-btn" onclick="toggleItalic()" id="italicBtn" title="Kursiv (Cmd+I)"><i>I</i></button>
+        <button class="format-btn" onclick="toggleUnderline()" id="underlineBtn" title="Unterstrichen (Cmd+U)"><u>U</u></button>
+    </div>
+
+    <div id="canvas-container">
+        <div id="canvas">
+            <svg id="connections"></svg>
+        </div>
+    </div>
+
+    <div id="instructions">
+        <h3>Anleitung:</h3>
+        <ul>
+            <li>Enter: Neuer Unterknoten</li>
+            <li>Shift+Enter: Zeilenumbruch</li>
+            <li>→ Button: Gleiche Ebene</li>
+            <li>↓ Button: Unterknoten</li>
+            <li>− Button: Knoten löschen</li>
+            <li>Rechtsklick: Farbe ändern</li>
+        </ul>
+    </div>
+
+    <div id="pdf-preview-modal">
+        <div id="pdf-preview-content">
+            <h2 style="text-align: center; margin-bottom: 20px;">PDF Vorschau</h2>
+            <p style="text-align: center; color: #6b7280; margin-bottom: 10px;">
+                Ziehe die Knoten, um sie neu zu positionieren. Aktiviere das Raster für präzise Ausrichtung.
+            </p>
+            <div style="text-align: center; margin-bottom: 15px;">
+                <label style="display: inline-flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="pdfSnapToGrid" onchange="togglePdfGrid()" style="cursor: pointer; width: 18px; height: 18px;">
+                    <span style="font-size: 14px; font-weight: 600;">Raster anzeigen</span>
+                </label>
+            </div>
+            <div id="pdf-preview-canvas"></div>
+            <div id="pdf-buttons">
+                <button class="pdf-btn pdf-btn-primary" onclick="generatePDF()">📄 PDF erstellen</button>
+                <button class="pdf-btn pdf-btn-secondary" onclick="closePdfPreview()">Abbrechen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const svg = document.getElementById('connections');
+        let nodes = [];
+        let textFields = [];
+        let connections = [];
+        let draggedElement = null;
+        let offsetX = 0;
+        let offsetY = 0;
+        let selectedNode = null;
+        let canvasDrag = false;
+        let canvasOffsetX = 0;
+        let canvasOffsetY = 0;
+        let startX = 0;
+        let startY = 0;
+        let nodeIdCounter = 0;
+        let textFieldIdCounter = 0;
+        let layoutMode = 'org'; // 'org' oder 'mindmap'
+        let snapToGrid = false;
+        let gridSize = 20; // Rastergröße in Pixel
+        let history = [];
+        let historyIndex = -1;
+        let currentTextarea = null;
+        let zoomLevel = 1; // Zoom-Level (0.5 = 50%, 1 = 100%, 2 = 200%)
+
+        const colors = [
+            { name: 'Blau', value: '#667eea' },
+            { name: 'Grün', value: '#4ade80' },
+            { name: 'Rosa', value: '#f472b6' },
+            { name: 'Orange', value: '#fb923c' }
+        ];
+
+        function zoomIn() {
+            if (zoomLevel < 2) {
+                zoomLevel += 0.1;
+                applyZoom();
+            }
+        }
+
+        function zoomOut() {
+            if (zoomLevel > 0.3) {
+                zoomLevel -= 0.1;
+                applyZoom();
+            }
+        }
+
+        function resetZoom() {
+            zoomLevel = 1;
+            applyZoom();
+        }
+
+        function applyZoom() {
+            canvas.style.transform = `scale(${zoomLevel})`;
+            canvas.style.transformOrigin = '0 0';
+            
+            // Canvas-Größe bleibt dynamisch, nur Zoom wird angepasst
+            const currentWidth = parseInt(canvas.style.width) || window.innerWidth;
+            const currentHeight = parseInt(canvas.style.height) || window.innerHeight;
+            
+            // Passe Container für korrektes Scrollen an
+            canvas.style.width = currentWidth + 'px';
+            canvas.style.height = currentHeight + 'px';
+        }
+
+        function changeLayoutMode() {
+            layoutMode = document.getElementById('layoutMode').value;
+            repositionAllNodes();
+            drawConnections();
+        }
+
+        function toggleSnapToGrid() {
+            snapToGrid = document.getElementById('snapToGrid').checked;
+            
+            // Zeige/verstecke Rasterlinien
+            if (snapToGrid) {
+                canvas.classList.add('show-grid');
+            } else {
+                canvas.classList.remove('show-grid');
+            }
+        }
+
+        function snapToGridPosition(value) {
+            if (!snapToGrid) return value;
+            return Math.round(value / gridSize) * gridSize;
+        }
+
+        // Undo/Redo Funktionen
+        function saveState() {
+            const state = {
+                nodes: nodes.map(n => ({
+                    id: n.id,
+                    x: parseInt(n.element.style.left),
+                    y: parseInt(n.element.style.top),
+                    text: n.element.querySelector('.node-text').value,
+                    color: n.color,
+                    parentId: n.parentId,
+                    fontFamily: n.element.querySelector('.node-text').style.fontFamily,
+                    fontSize: n.element.querySelector('.node-text').style.fontSize,
+                    fontWeight: n.element.querySelector('.node-text').style.fontWeight,
+                    fontStyle: n.element.querySelector('.node-text').style.fontStyle,
+                    textDecoration: n.element.querySelector('.node-text').style.textDecoration
+                })),
+                textFields: textFields.map(tf => ({
+                    id: tf.id,
+                    x: parseInt(tf.element.style.left),
+                    y: parseInt(tf.element.style.top),
+                    text: tf.element.querySelector('.text-field-content').value
+                })),
+                connections: [...connections]
+            };
+
+            // Entferne alle zukünftigen States wenn wir in der Vergangenheit sind
+            if (historyIndex < history.length - 1) {
+                history = history.slice(0, historyIndex + 1);
+            }
+
+            history.push(state);
+            historyIndex++;
+
+            // Begrenze History auf 50 Schritte
+            if (history.length > 50) {
+                history.shift();
+                historyIndex--;
+            }
+        }
+
+        function undo() {
+            if (historyIndex > 0) {
+                historyIndex--;
+                restoreState(history[historyIndex]);
+            }
+        }
+
+        function redo() {
+            if (historyIndex < history.length - 1) {
+                historyIndex++;
+                restoreState(history[historyIndex]);
+            }
+        }
+
+        function restoreState(state) {
+            // Lösche alles
+            nodes.forEach(n => n.element.remove());
+            textFields.forEach(tf => tf.element.remove());
+            nodes = [];
+            textFields = [];
+            connections = [];
+
+            // Lade Knoten
+            state.nodes.forEach(nodeData => {
+                const nodeId = nodeData.id;
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.id = nodeId;
+                node.style.left = nodeData.x + 'px';
+                node.style.top = nodeData.y + 'px';
+                node.style.borderColor = nodeData.color;
+                
+                node.innerHTML = `
+                    <div class="node-content">
+                        <textarea class="node-text" rows="1">${nodeData.text}</textarea>
+                        <div class="node-buttons">
+                            <button class="node-btn sibling-btn" onclick="addSiblingNode('${nodeId}')" title="Knoten auf gleicher Ebene">→</button>
+                            <button class="node-btn add-btn" onclick="addChildNode('${nodeId}')" title="Unterknoten">↓</button>
+                            <button class="node-btn delete-btn" onclick="deleteNode('${nodeId}')" title="Löschen">−</button>
+                        </div>
+                    </div>
+                `;
+
+                const textarea = node.querySelector('.node-text');
+                if (nodeData.fontFamily) textarea.style.fontFamily = nodeData.fontFamily;
+                if (nodeData.fontSize) textarea.style.fontSize = nodeData.fontSize;
+                if (nodeData.fontWeight) textarea.style.fontWeight = nodeData.fontWeight;
+                if (nodeData.fontStyle) textarea.style.fontStyle = nodeData.fontStyle;
+                if (nodeData.textDecoration) textarea.style.textDecoration = nodeData.textDecoration;
+
+                canvas.appendChild(node);
+
+                const newNodeData = {
+                    id: nodeId,
+                    element: node,
+                    parentId: nodeData.parentId,
+                    color: nodeData.color
+                };
+
+                nodes.push(newNodeData);
+                makeElementDraggable(node);
+                setupTextarea(textarea);
+                setupContextMenu(node, newNodeData);
+            });
+
+            // Lade Textfelder
+            state.textFields.forEach(tfData => {
+                const textFieldId = tfData.id;
+                const textField = document.createElement('div');
+                textField.className = 'text-field';
+                textField.id = textFieldId;
+                textField.style.left = tfData.x + 'px';
+                textField.style.top = tfData.y + 'px';
+
+                textField.innerHTML = `
+                    <textarea class="text-field-content" rows="2">${tfData.text}</textarea>
+                    <button class="text-field-delete" onclick="deleteTextField('${textFieldId}')">×</button>
+                `;
+
+                canvas.appendChild(textField);
+
+                textFields.push({
+                    id: textFieldId,
+                    element: textField
+                });
+
+                makeElementDraggable(textField);
+                setupTextarea(textField.querySelector('.text-field-content'));
+            });
+
+            connections = state.connections;
+            drawConnections();
+        }
+
+        // Formatierungs-Funktionen
+        function toggleBold() {
+            if (!currentTextarea) return;
+            const current = currentTextarea.style.fontWeight;
+            currentTextarea.style.fontWeight = current === 'bold' ? 'normal' : 'bold';
+            updateFormatButtons();
+            saveState();
+        }
+
+        function toggleItalic() {
+            if (!currentTextarea) return;
+            const current = currentTextarea.style.fontStyle;
+            currentTextarea.style.fontStyle = current === 'italic' ? 'normal' : 'italic';
+            updateFormatButtons();
+            saveState();
+        }
+
+        function toggleUnderline() {
+            if (!currentTextarea) return;
+            const current = currentTextarea.style.textDecoration;
+            currentTextarea.style.textDecoration = current === 'underline' ? 'none' : 'underline';
+            updateFormatButtons();
+            saveState();
+        }
+
+        function applyFormatting() {
+            if (!currentTextarea) return;
+            
+            const fontFamily = document.getElementById('fontFamily').value;
+            const fontSize = document.getElementById('fontSize').value;
+            
+            currentTextarea.style.fontFamily = fontFamily;
+            currentTextarea.style.fontSize = fontSize;
+            saveState();
+        }
+
+        function updateFormatButtons() {
+            if (!currentTextarea) return;
+            
+            const boldBtn = document.getElementById('boldBtn');
+            const italicBtn = document.getElementById('italicBtn');
+            const underlineBtn = document.getElementById('underlineBtn');
+            
+            boldBtn.classList.toggle('active', currentTextarea.style.fontWeight === 'bold');
+            italicBtn.classList.toggle('active', currentTextarea.style.fontStyle === 'italic');
+            underlineBtn.classList.toggle('active', currentTextarea.style.textDecoration === 'underline');
+        }
+
+        // Keyboard Shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Cmd/Ctrl + Z = Undo
+            if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !e.shiftKey) {
+                e.preventDefault();
+                undo();
+            }
+            // Cmd/Ctrl + Shift + Z = Redo
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'z' && e.shiftKey) {
+                e.preventDefault();
+                redo();
+            }
+            // Cmd/Ctrl + Y = Redo (alternative)
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'y') {
+                e.preventDefault();
+                redo();
+            }
+            // Cmd/Ctrl + B = Bold
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+                e.preventDefault();
+                toggleBold();
+            }
+            // Cmd/Ctrl + I = Italic
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'i') {
+                e.preventDefault();
+                toggleItalic();
+            }
+            // Cmd/Ctrl + U = Underline
+            else if ((e.metaKey || e.ctrlKey) && e.key === 'u') {
+                e.preventDefault();
+                toggleUnderline();
+            }
+        });
+
+        // Zentral-Knoten erstellen
+        function init() {
+            // Starte in der Mitte des Viewports
+            const container = document.getElementById('canvas-container');
+            const startX = container.clientWidth / 2 - 75; // 75 = halbe Knotenbreite ca.
+            const startY = container.clientHeight / 2 - 25; // 25 = halbe Knotenhöhe ca.
+            
+            createNode(startX, startY, null, 'Hauptthema');
+            
+            setTimeout(() => {
+                updateCanvasSize();
+                saveState();
+            }, 100);
+        }
+
+        function updateCanvasSize() {
+            // Finde die äußersten Positionen aller Knoten
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+            
+            nodes.forEach(node => {
+                const x = parseInt(node.element.style.left);
+                const y = parseInt(node.element.style.top);
+                const width = node.element.offsetWidth;
+                const height = node.element.offsetHeight;
+                
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + width);
+                maxY = Math.max(maxY, y + height);
+            });
+
+            textFields.forEach(tf => {
+                const x = parseInt(tf.element.style.left);
+                const y = parseInt(tf.element.style.top);
+                const width = tf.element.offsetWidth;
+                const height = tf.element.offsetHeight;
+                
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + width);
+                maxY = Math.max(maxY, y + height);
+            });
+
+            // Füge Padding hinzu
+            const padding = 200;
+            const newWidth = Math.max(maxX + padding, window.innerWidth);
+            const newHeight = Math.max(maxY + padding, window.innerHeight);
+            
+            canvas.style.width = newWidth + 'px';
+            canvas.style.height = newHeight + 'px';
+        }
+
+        function centerView() {
+            if (nodes.length === 0) return;
+
+            // Finde die Grenzen aller Knoten
+            let minX = Infinity, minY = Infinity;
+            let maxX = -Infinity, maxY = -Infinity;
+
+            nodes.forEach(node => {
+                const rect = node.element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = rect.left - canvasRect.left;
+                const y = rect.top - canvasRect.top;
+                const width = rect.width;
+                const height = rect.height;
+
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + width);
+                maxY = Math.max(maxY, y + height);
+            });
+
+            // Berechne Zentrum
+            const centerX = (minX + maxX) / 2;
+            const centerY = (minY + maxY) / 2;
+
+            // Scroll zu diesem Zentrum
+            const container = document.getElementById('canvas-container');
+            const containerWidth = container.clientWidth;
+            const containerHeight = container.clientHeight;
+
+            container.scrollLeft = centerX - containerWidth / 2;
+            container.scrollTop = centerY - containerHeight / 2;
+        }
+
+        function createNode(x, y, parentId, text = 'Neuer Knoten') {
+            const nodeId = 'node-' + (nodeIdCounter++);
+            const node = document.createElement('div');
+            node.className = 'node';
+            node.id = nodeId;
+            node.style.left = x + 'px';
+            node.style.top = y + 'px';
+            
+            node.innerHTML = `
+                <div class="node-content">
+                    <textarea class="node-text" rows="1" placeholder="Text eingeben...">${text}</textarea>
+                    <div class="node-buttons">
+                        <button class="node-btn sibling-btn" onclick="addSiblingNode('${nodeId}')" title="Knoten auf gleicher Ebene">→</button>
+                        <button class="node-btn add-btn" onclick="addChildNode('${nodeId}')" title="Unterknoten">↓</button>
+                        <button class="node-btn delete-btn" onclick="deleteNode('${nodeId}')" title="Löschen">−</button>
+                    </div>
+                </div>
+            `;
+
+            canvas.appendChild(node);
+
+            const nodeData = {
+                id: nodeId,
+                element: node,
+                parentId: parentId,
+                color: colors[0].value
+            };
+
+            nodes.push(nodeData);
+
+            if (parentId) {
+                connections.push({ from: parentId, to: nodeId });
+            }
+
+            makeElementDraggable(node);
+            setupTextarea(node.querySelector('.node-text'));
+            setupContextMenu(node, nodeData);
+
+            drawConnections();
+            updateCanvasSize();
+            return nodeId;
+        }
+
+        function addChildNode(parentId) {
+            const parentNode = nodes.find(n => n.id === parentId);
+            if (!parentNode) return;
+
+            const rect = parentNode.element.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Zähle wie viele Kinder dieser Parent bereits hat
+            const childrenCount = connections.filter(c => c.from === parentId).length;
+            
+            let x, y;
+            
+            if (layoutMode === 'org') {
+                // Fondsvariante: Kinder erscheinen unter dem Parent, horizontal verteilt
+                x = rect.left - canvasRect.left + (childrenCount * 200);
+                y = rect.top - canvasRect.top + 120;
+            } else {
+                // Klassische Mind Map: Kinder im Kreis um Parent
+                const angle = (childrenCount * 60) * (Math.PI / 180); // 60 Grad zwischen Kindern
+                const radius = 250;
+                x = rect.left - canvasRect.left + rect.width/2 + Math.cos(angle) * radius - 75;
+                y = rect.top - canvasRect.top + rect.height/2 + Math.sin(angle) * radius - 25;
+            }
+
+            const newNodeId = createNode(x, y, parentId);
+            
+            // Fokussiere den neuen Knoten
+            setTimeout(() => {
+                const newNode = nodes.find(n => n.id === newNodeId);
+                if (newNode) {
+                    newNode.element.querySelector('.node-text').focus();
+                }
+                saveState();
+            }, 50);
+        }
+
+        function addSiblingNode(nodeId) {
+            const currentNode = nodes.find(n => n.id === nodeId);
+            if (!currentNode) return;
+
+            const rect = currentNode.element.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            
+            // Wenn der aktuelle Knoten einen Parent hat, erstelle Geschwisterknoten
+            if (currentNode.parentId) {
+                const parentNode = nodes.find(n => n.id === currentNode.parentId);
+                
+                // Zähle Geschwister (alle Kinder des gleichen Parents)
+                const siblingsCount = connections.filter(c => c.from === currentNode.parentId).length;
+                
+                let x, y;
+                
+                if (layoutMode === 'org') {
+                    // Rechts neben den anderen Geschwistern
+                    const parentRect = parentNode.element.getBoundingClientRect();
+                    x = parentRect.left - canvasRect.left + (siblingsCount * 200);
+                    y = parentRect.top - canvasRect.top + 120;
+                } else {
+                    // Im Kreis um den Parent
+                    const parentRect = parentNode.element.getBoundingClientRect();
+                    const angle = (siblingsCount * 60) * (Math.PI / 180);
+                    const radius = 250;
+                    x = parentRect.left - canvasRect.left + parentRect.width/2 + Math.cos(angle) * radius - 75;
+                    y = parentRect.top - canvasRect.top + parentRect.height/2 + Math.sin(angle) * radius - 25;
+                }
+                
+                const newNodeId = createNode(x, y, currentNode.parentId);
+                
+                setTimeout(() => {
+                    const newNode = nodes.find(n => n.id === newNodeId);
+                    if (newNode) {
+                        newNode.element.querySelector('.node-text').focus();
+                    }
+                    saveState();
+                }, 50);
+            } else {
+                // Wenn kein Parent (Hauptthema), erstelle ein neues Hauptthema daneben
+                const rootNodes = nodes.filter(n => !n.parentId);
+                const x = rect.left - canvasRect.left + 400;
+                const y = rect.top - canvasRect.top;
+                
+                const newNodeId = createNode(x, y, null, 'Hauptthema');
+                
+                setTimeout(() => {
+                    const newNode = nodes.find(n => n.id === newNodeId);
+                    if (newNode) {
+                        newNode.element.querySelector('.node-text').focus();
+                    }
+                    saveState();
+                }, 50);
+            }
+        }
+
+        function deleteNode(nodeId) {
+            // Finde alle Kindknoten
+            const childIds = connections
+                .filter(c => c.from === nodeId)
+                .map(c => c.to);
+
+            // Lösche alle Kindknoten rekursiv
+            childIds.forEach(childId => deleteNode(childId));
+
+            // Entferne Verbindungen
+            connections = connections.filter(c => c.from !== nodeId && c.to !== nodeId);
+
+            // Entferne Knoten
+            const nodeIndex = nodes.findIndex(n => n.id === nodeId);
+            if (nodeIndex !== -1) {
+                nodes[nodeIndex].element.remove();
+                nodes.splice(nodeIndex, 1);
+            }
+
+            drawConnections();
+            updateCanvasSize();
+            saveState();
+        }
+
+        function addTextField() {
+            const textFieldId = 'textfield-' + (textFieldIdCounter++);
+            const textField = document.createElement('div');
+            textField.className = 'text-field';
+            textField.id = textFieldId;
+            textField.style.left = '1400px';
+            textField.style.top = '1200px';
+
+            textField.innerHTML = `
+                <textarea class="text-field-content" rows="2" placeholder="Textfeld..."></textarea>
+                <button class="text-field-delete" onclick="deleteTextField('${textFieldId}')">×</button>
+            `;
+
+            canvas.appendChild(textField);
+
+            const textFieldData = {
+                id: textFieldId,
+                element: textField
+            };
+
+            textFields.push(textFieldData);
+
+            makeElementDraggable(textField);
+            setupTextarea(textField.querySelector('.text-field-content'));
+            updateCanvasSize();
+        }
+
+        function deleteTextField(textFieldId) {
+            const index = textFields.findIndex(tf => tf.id === textFieldId);
+            if (index !== -1) {
+                textFields[index].element.remove();
+                textFields.splice(index, 1);
+            }
+        }
+
+        function repositionAllNodes() {
+            // Reorganisiere alle Knoten basierend auf dem Layout-Modus
+            const rootNodes = nodes.filter(n => !n.parentId);
+            
+            rootNodes.forEach(rootNode => {
+                repositionNodeTree(rootNode.id, 1400, 1400);
+            });
+        }
+
+        function repositionNodeTree(nodeId, x, y) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (!node) return;
+
+            node.element.style.left = x + 'px';
+            node.element.style.top = y + 'px';
+
+            // Finde alle Kinder
+            const childIds = connections.filter(c => c.from === nodeId).map(c => c.to);
+            
+            childIds.forEach((childId, index) => {
+                let childX, childY;
+                
+                if (layoutMode === 'org') {
+                    childX = x + (index * 200);
+                    childY = y + 120;
+                } else {
+                    const angle = (index * 60) * (Math.PI / 180);
+                    const radius = 250;
+                    childX = x + Math.cos(angle) * radius;
+                    childY = y + Math.sin(angle) * radius;
+                }
+                
+                repositionNodeTree(childId, childX, childY);
+            });
+        }
+
+        function makeElementDraggable(element) {
+            element.addEventListener('mousedown', function(e) {
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') {
+                    return;
+                }
+
+                e.preventDefault();
+                draggedElement = element;
+                
+                const rect = element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+            });
+
+            // Touch-Support für Mobile
+            element.addEventListener('touchstart', function(e) {
+                if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'BUTTON') {
+                    return;
+                }
+
+                e.preventDefault();
+                draggedElement = element;
+                
+                const touch = e.touches[0];
+                const rect = element.getBoundingClientRect();
+                
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+            });
+        }
+
+        document.addEventListener('mousemove', function(e) {
+            if (draggedElement) {
+                const canvasRect = canvas.getBoundingClientRect();
+                let newX = e.clientX - canvasRect.left - offsetX;
+                let newY = e.clientY - canvasRect.top - offsetY;
+
+                // Einrasten anwenden
+                newX = snapToGridPosition(newX);
+                newY = snapToGridPosition(newY);
+
+                draggedElement.style.left = newX + 'px';
+                draggedElement.style.top = newY + 'px';
+
+                drawConnections();
+                updateCanvasSize();
+            } else if (canvasDrag && !('ontouchstart' in window)) {
+                const dx = e.clientX - startX;
+                const dy = e.clientY - startY;
+                
+                document.getElementById('canvas-container').scrollLeft = canvasOffsetX - dx;
+                document.getElementById('canvas-container').scrollTop = canvasOffsetY - dy;
+            }
+        });
+
+        document.addEventListener('touchmove', function(e) {
+            if (draggedElement) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                const canvasRect = canvas.getBoundingClientRect();
+                let newX = touch.clientX - canvasRect.left - offsetX;
+                let newY = touch.clientY - canvasRect.top - offsetY;
+
+                newX = snapToGridPosition(newX);
+                newY = snapToGridPosition(newY);
+
+                draggedElement.style.left = newX + 'px';
+                draggedElement.style.top = newY + 'px';
+
+                drawConnections();
+                updateCanvasSize();
+            }
+            // Kein else - natives Scrollen erlauben!
+        });
+
+        document.addEventListener('mouseup', function() {
+            draggedElement = null;
+            canvasDrag = false;
+        });
+
+        document.addEventListener('touchend', function() {
+            draggedElement = null;
+            canvasDrag = false;
+        });
+
+        // Canvas ziehen - nur auf Desktop
+        if (!('ontouchstart' in window)) {
+            canvas.addEventListener('mousedown', function(e) {
+                if (e.target === canvas || e.target === svg) {
+                    canvasDrag = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                    const container = document.getElementById('canvas-container');
+                    canvasOffsetX = container.scrollLeft;
+                    canvasOffsetY = container.scrollTop;
+                }
+            });
+        }
+
+        // Pinch-to-Zoom für Mobile
+        let lastTouchDistance = 0;
+        canvas.addEventListener('touchstart', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                lastTouchDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+            }
+        });
+
+        canvas.addEventListener('touchmove', function(e) {
+            if (e.touches.length === 2) {
+                e.preventDefault();
+                const touch1 = e.touches[0];
+                const touch2 = e.touches[1];
+                const currentDistance = Math.hypot(
+                    touch2.clientX - touch1.clientX,
+                    touch2.clientY - touch1.clientY
+                );
+
+                if (lastTouchDistance > 0) {
+                    const delta = currentDistance - lastTouchDistance;
+                    if (delta > 5 && zoomLevel < 2) {
+                        zoomLevel += 0.05;
+                        applyZoom();
+                    } else if (delta < -5 && zoomLevel > 0.3) {
+                        zoomLevel -= 0.05;
+                        applyZoom();
+                    }
+                }
+                lastTouchDistance = currentDistance;
+            }
+        });
+
+        canvas.addEventListener('touchend', function() {
+            lastTouchDistance = 0;
+        });
+
+        function setupTextarea(textarea) {
+            textarea.addEventListener('input', function() {
+                this.style.height = 'auto';
+                this.style.height = this.scrollHeight + 'px';
+            });
+            
+            // Track current textarea for formatting
+            textarea.addEventListener('focus', function() {
+                currentTextarea = this;
+                document.getElementById('formatting-toolbar').classList.add('show');
+                
+                // Update dropdowns
+                const computedStyle = window.getComputedStyle(this);
+                document.getElementById('fontFamily').value = this.style.fontFamily || "'Segoe UI', sans-serif";
+                document.getElementById('fontSize').value = this.style.fontSize || '14px';
+                
+                updateFormatButtons();
+            });
+            
+            textarea.addEventListener('blur', function() {
+                setTimeout(() => {
+                    // Only hide if no textarea is focused
+                    if (!document.activeElement.classList.contains('node-text') && 
+                        !document.activeElement.classList.contains('text-field-content')) {
+                        document.getElementById('formatting-toolbar').classList.remove('show');
+                        currentTextarea = null;
+                    }
+                }, 100);
+            });
+            
+            // Nur für Knoten-Textfelder (nicht für freie Textfelder)
+            if (textarea.classList.contains('node-text')) {
+                textarea.addEventListener('keydown', function(e) {
+                    // Enter OHNE Shift = neuen Knoten erstellen
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        const nodeElement = this.closest('.node');
+                        const nodeId = nodeElement.id;
+                        addChildNode(nodeId);
+                    }
+                    // Shift + Enter = normaler Zeilenumbruch (passiert automatisch)
+                });
+            }
+        }
+
+        function setupContextMenu(element, nodeData) {
+            element.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+                
+                // Entferne alte Menüs
+                document.querySelectorAll('.context-menu').forEach(m => m.remove());
+
+                const menu = document.createElement('div');
+                menu.className = 'context-menu';
+                menu.style.left = e.pageX + 'px';
+                menu.style.top = e.pageY + 'px';
+
+                colors.forEach(color => {
+                    const item = document.createElement('div');
+                    item.className = 'context-menu-item';
+                    item.innerHTML = `
+                        <div class="color-indicator" style="background: ${color.value}"></div>
+                        <span>${color.name}</span>
+                    `;
+                    item.addEventListener('click', function() {
+                        nodeData.color = color.value;
+                        nodeData.element.style.borderColor = color.value;
+                        drawConnections();
+                        menu.remove();
+                    });
+                    menu.appendChild(item);
+                });
+
+                document.body.appendChild(menu);
+
+                setTimeout(() => {
+                    document.addEventListener('click', function removeMenu() {
+                        menu.remove();
+                        document.removeEventListener('click', removeMenu);
+                    });
+                }, 100);
+            });
+        }
+
+        function drawConnections() {
+            svg.innerHTML = '';
+            const canvasRect = canvas.getBoundingClientRect();
+
+            if (layoutMode === 'org') {
+                // Fondsvariante: Orthogonale Linien (senkrecht + horizontal + senkrecht)
+                // Gruppiere Verbindungen nach Parent
+                const parentGroups = {};
+                connections.forEach(conn => {
+                    if (!parentGroups[conn.from]) {
+                        parentGroups[conn.from] = [];
+                    }
+                    parentGroups[conn.from].push(conn.to);
+                });
+
+                Object.keys(parentGroups).forEach(parentId => {
+                    const parentNode = nodes.find(n => n.id === parentId);
+                    if (!parentNode) return;
+
+                    const children = parentGroups[parentId].map(childId => nodes.find(n => n.id === childId)).filter(n => n);
+                    if (children.length === 0) return;
+
+                    const parentRect = parentNode.element.getBoundingClientRect();
+                    const parentCenterX = parentRect.left - canvasRect.left + parentRect.width / 2;
+                    const parentBottom = parentRect.top - canvasRect.top + parentRect.height;
+
+                    // 1. Senkrechte Linie nach unten (60px)
+                    const verticalLineEnd = parentBottom + 60;
+                    const line1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line1.setAttribute('x1', parentCenterX);
+                    line1.setAttribute('y1', parentBottom);
+                    line1.setAttribute('x2', parentCenterX);
+                    line1.setAttribute('y2', verticalLineEnd);
+                    line1.setAttribute('stroke', parentNode.color);
+                    line1.setAttribute('stroke-width', '3');
+                    line1.setAttribute('opacity', '0.6');
+                    svg.appendChild(line1);
+
+                    // Finde linkes und rechtes Ende der Kinder
+                    let leftMostX = Infinity;
+                    let rightMostX = -Infinity;
+                    children.forEach(child => {
+                        const childRect = child.element.getBoundingClientRect();
+                        const childCenterX = childRect.left - canvasRect.left + childRect.width / 2;
+                        leftMostX = Math.min(leftMostX, childCenterX);
+                        rightMostX = Math.max(rightMostX, childCenterX);
+                    });
+
+                    // 2. Horizontale Linie
+                    const line2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line2.setAttribute('x1', leftMostX);
+                    line2.setAttribute('y1', verticalLineEnd);
+                    line2.setAttribute('x2', rightMostX);
+                    line2.setAttribute('y2', verticalLineEnd);
+                    line2.setAttribute('stroke', parentNode.color);
+                    line2.setAttribute('stroke-width', '3');
+                    line2.setAttribute('opacity', '0.6');
+                    svg.appendChild(line2);
+
+                    // 3. Senkrechte Linien zu jedem Kind
+                    children.forEach(child => {
+                        const childRect = child.element.getBoundingClientRect();
+                        const childCenterX = childRect.left - canvasRect.left + childRect.width / 2;
+                        const childTop = childRect.top - canvasRect.top;
+
+                        const line3 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        line3.setAttribute('x1', childCenterX);
+                        line3.setAttribute('y1', verticalLineEnd);
+                        line3.setAttribute('x2', childCenterX);
+                        line3.setAttribute('y2', childTop);
+                        line3.setAttribute('stroke', parentNode.color);
+                        line3.setAttribute('stroke-width', '3');
+                        line3.setAttribute('opacity', '0.6');
+                        svg.appendChild(line3);
+                    });
+                });
+
+            } else {
+                // Klassische Mind Map: Direkte Linien
+                connections.forEach(conn => {
+                    const fromNode = nodes.find(n => n.id === conn.from);
+                    const toNode = nodes.find(n => n.id === conn.to);
+
+                    if (!fromNode || !toNode) return;
+
+                    const fromRect = fromNode.element.getBoundingClientRect();
+                    const toRect = toNode.element.getBoundingClientRect();
+
+                    const x1 = fromRect.left - canvasRect.left + fromRect.width / 2;
+                    const y1 = fromRect.top - canvasRect.top + fromRect.height / 2;
+                    const x2 = toRect.left - canvasRect.left + toRect.width / 2;
+                    const y2 = toRect.top - canvasRect.top + toRect.height / 2;
+
+                    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    line.setAttribute('x1', x1);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    line.setAttribute('stroke', fromNode.color);
+                    line.setAttribute('stroke-width', '3');
+                    line.setAttribute('opacity', '0.6');
+
+                    svg.appendChild(line);
+                });
+            }
+        }
+
+        function saveMap() {
+            // Speichere als HTML-Datei die direkt im Browser geöffnet werden kann
+            const htmlContent = document.documentElement.outerHTML;
+            const blob = new Blob([htmlContent], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'MINDNOTE_' + new Date().toISOString().slice(0,10) + '.html';
+            a.click();
+            URL.revokeObjectURL(url);
+            alert('MINDNOTE als HTML-Datei gespeichert! Einfach die Datei mit dem Browser öffnen.');
+        }
+
+        function loadMap() {
+            alert('Um eine gespeicherte MINDNOTE zu laden, öffne einfach die HTML-Datei mit deinem Browser (Doppelklick oder Rechtsklick → Öffnen mit → Browser).');
+        }
+
+        function exportImage() {
+            showPdfPreview();
+        }
+
+        let pdfNodes = [];
+        let pdfTextFields = [];
+        let pdfDraggedElement = null;
+        let pdfOffsetX = 0;
+        let pdfOffsetY = 0;
+        let pdfSnapEnabled = false;
+
+        function showPdfPreview() {
+            const modal = document.getElementById('pdf-preview-modal');
+            const previewCanvas = document.getElementById('pdf-preview-canvas');
+            
+            // Berechne Bounds aller Elemente
+            let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+            
+            nodes.forEach(node => {
+                const rect = node.element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = rect.left - canvasRect.left;
+                const y = rect.top - canvasRect.top;
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + rect.width);
+                maxY = Math.max(maxY, y + rect.height);
+            });
+
+            textFields.forEach(tf => {
+                const rect = tf.element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const x = rect.left - canvasRect.left;
+                const y = rect.top - canvasRect.top;
+                minX = Math.min(minX, x);
+                minY = Math.min(minY, y);
+                maxX = Math.max(maxX, x + rect.width);
+                maxY = Math.max(maxY, y + rect.height);
+            });
+
+            const padding = 50;
+            const width = maxX - minX + padding * 2;
+            const height = maxY - minY + padding * 2;
+
+            previewCanvas.style.width = width + 'px';
+            previewCanvas.style.height = height + 'px';
+            previewCanvas.innerHTML = '';
+
+            // Canvas für Verbindungen (besser für PDF als SVG)
+            const connectionCanvas = document.createElement('canvas');
+            // Höhere Auflösung für schärfere Linien
+            const scale = 2;
+            connectionCanvas.width = width * scale;
+            connectionCanvas.height = height * scale;
+            connectionCanvas.style.position = 'absolute';
+            connectionCanvas.style.top = '0';
+            connectionCanvas.style.left = '0';
+            connectionCanvas.style.width = width + 'px';
+            connectionCanvas.style.height = height + 'px';
+            connectionCanvas.style.pointerEvents = 'none';
+            
+            // Bessere Rendering-Qualität
+            const ctx = connectionCanvas.getContext('2d');
+            ctx.scale(scale, scale);
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
+            previewCanvas.appendChild(connectionCanvas);
+
+            pdfNodes = [];
+            pdfTextFields = [];
+
+            // Knoten kopieren (OHNE Buttons)
+            nodes.forEach(node => {
+                const rect = node.element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const textarea = node.element.querySelector('.node-text');
+                
+                const pdfNode = document.createElement('div');
+                pdfNode.className = 'pdf-node';
+                pdfNode.style.left = (rect.left - canvasRect.left - minX + padding) + 'px';
+                pdfNode.style.top = (rect.top - canvasRect.top - minY + padding) + 'px';
+                pdfNode.style.borderColor = node.color;
+                pdfNode.style.fontFamily = textarea.style.fontFamily || 'inherit';
+                pdfNode.style.fontSize = textarea.style.fontSize || '14px';
+                pdfNode.style.fontWeight = textarea.style.fontWeight || 'normal';
+                pdfNode.style.fontStyle = textarea.style.fontStyle || 'normal';
+                pdfNode.style.textDecoration = textarea.style.textDecoration || 'none';
+                pdfNode.textContent = textarea.value;
+                
+                previewCanvas.appendChild(pdfNode);
+                pdfNodes.push({ element: pdfNode, originalNode: node });
+                
+                makePdfElementDraggable(pdfNode);
+            });
+
+            // Textfelder kopieren
+            textFields.forEach(tf => {
+                const rect = tf.element.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                const textarea = tf.element.querySelector('.text-field-content');
+                
+                const pdfTf = document.createElement('div');
+                pdfTf.className = 'pdf-text-field';
+                pdfTf.style.left = (rect.left - canvasRect.left - minX + padding) + 'px';
+                pdfTf.style.top = (rect.top - canvasRect.top - minY + padding) + 'px';
+                pdfTf.textContent = textarea.value;
+                
+                previewCanvas.appendChild(pdfTf);
+                pdfTextFields.push({ element: pdfTf });
+                
+                makePdfElementDraggable(pdfTf);
+            });
+
+            drawPdfConnections();
+            modal.classList.add('show');
+        }
+
+        function makePdfElementDraggable(element) {
+            element.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                pdfDraggedElement = element;
+                const rect = element.getBoundingClientRect();
+                pdfOffsetX = e.clientX - rect.left;
+                pdfOffsetY = e.clientY - rect.top;
+            });
+        }
+
+        document.addEventListener('mousemove', function(e) {
+            if (pdfDraggedElement) {
+                const previewCanvas = document.getElementById('pdf-preview-canvas');
+                const canvasRect = previewCanvas.getBoundingClientRect();
+                let newX = e.clientX - canvasRect.left - pdfOffsetX;
+                let newY = e.clientY - canvasRect.top - pdfOffsetY;
+
+                if (pdfSnapEnabled) {
+                    newX = Math.round(newX / 20) * 20;
+                    newY = Math.round(newY / 20) * 20;
+                }
+
+                pdfDraggedElement.style.left = newX + 'px';
+                pdfDraggedElement.style.top = newY + 'px';
+
+                drawPdfConnections();
+            }
+        });
+
+        document.addEventListener('mouseup', function() {
+            pdfDraggedElement = null;
+        });
+
+        function drawPdfConnections() {
+            const previewCanvas = document.getElementById('pdf-preview-canvas');
+            const connectionCanvas = previewCanvas.querySelector('canvas');
+            if (!connectionCanvas) return;
+            
+            const ctx = connectionCanvas.getContext('2d');
+            const canvasRect = previewCanvas.getBoundingClientRect();
+            
+            // Clear canvas ohne die Transformation zu verlieren
+            const scale = 2;
+            ctx.save();
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.clearRect(0, 0, connectionCanvas.width, connectionCanvas.height);
+            ctx.restore();
+            
+            // Render-Qualität
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            if (layoutMode === 'org') {
+                const parentGroups = {};
+                connections.forEach(conn => {
+                    if (!parentGroups[conn.from]) {
+                        parentGroups[conn.from] = [];
+                    }
+                    parentGroups[conn.from].push(conn.to);
+                });
+
+                Object.keys(parentGroups).forEach(parentId => {
+                    const parentPdf = pdfNodes.find(n => n.originalNode.id === parentId);
+                    if (!parentPdf) return;
+
+                    const children = parentGroups[parentId]
+                        .map(childId => pdfNodes.find(n => n.originalNode.id === childId))
+                        .filter(n => n);
+                    
+                    if (children.length === 0) return;
+
+                    const parentRect = parentPdf.element.getBoundingClientRect();
+                    const parentCenterX = parentRect.left - canvasRect.left + parentRect.width / 2;
+                    const parentBottom = parentRect.top - canvasRect.top + parentRect.height;
+
+                    const verticalLineEnd = parentBottom + 60;
+                    
+                    // Farbe setzen
+                    ctx.strokeStyle = parentPdf.originalNode.color;
+                    
+                    // Vertikale Linie
+                    ctx.beginPath();
+                    ctx.moveTo(parentCenterX, parentBottom);
+                    ctx.lineTo(parentCenterX, verticalLineEnd);
+                    ctx.stroke();
+
+                    let leftMostX = Infinity;
+                    let rightMostX = -Infinity;
+                    children.forEach(child => {
+                        const childRect = child.element.getBoundingClientRect();
+                        const childCenterX = childRect.left - canvasRect.left + childRect.width / 2;
+                        leftMostX = Math.min(leftMostX, childCenterX);
+                        rightMostX = Math.max(rightMostX, childCenterX);
+                    });
+
+                    // Horizontale Linie
+                    ctx.beginPath();
+                    ctx.moveTo(leftMostX, verticalLineEnd);
+                    ctx.lineTo(rightMostX, verticalLineEnd);
+                    ctx.stroke();
+
+                    // Vertikale Linien zu Kindern
+                    children.forEach(child => {
+                        const childRect = child.element.getBoundingClientRect();
+                        const childCenterX = childRect.left - canvasRect.left + childRect.width / 2;
+                        const childTop = childRect.top - canvasRect.top;
+
+                        ctx.beginPath();
+                        ctx.moveTo(childCenterX, verticalLineEnd);
+                        ctx.lineTo(childCenterX, childTop);
+                        ctx.stroke();
+                    });
+                });
+            } else {
+                connections.forEach(conn => {
+                    const fromPdf = pdfNodes.find(n => n.originalNode.id === conn.from);
+                    const toPdf = pdfNodes.find(n => n.originalNode.id === conn.to);
+
+                    if (!fromPdf || !toPdf) return;
+
+                    const fromRect = fromPdf.element.getBoundingClientRect();
+                    const toRect = toPdf.element.getBoundingClientRect();
+
+                    const x1 = fromRect.left - canvasRect.left + fromRect.width / 2;
+                    const y1 = fromRect.top - canvasRect.top + fromRect.height / 2;
+                    const x2 = toRect.left - canvasRect.left + toRect.width / 2;
+                    const y2 = toRect.top - canvasRect.top + toRect.height / 2;
+
+                    ctx.strokeStyle = fromPdf.originalNode.color;
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function togglePdfGrid() {
+            pdfSnapEnabled = document.getElementById('pdfSnapToGrid').checked;
+            const previewCanvas = document.getElementById('pdf-preview-canvas');
+            if (pdfSnapEnabled) {
+                previewCanvas.classList.add('show-grid');
+            } else {
+                previewCanvas.classList.remove('show-grid');
+            }
+        }
+
+        function closePdfPreview() {
+            document.getElementById('pdf-preview-modal').classList.remove('show');
+        }
+
+        async function generatePDF() {
+            const previewCanvas = document.getElementById('pdf-preview-canvas');
+            
+            try {
+                // Niedrigere Scale für kleinere Datei, aber immer noch gute Qualität
+                const canvas = await html2canvas(previewCanvas, {
+                    scale: 1.5,  // Reduziert von 2 auf 1.5
+                    backgroundColor: '#ffffff',
+                    logging: false,
+                    useCORS: true,
+                    allowTaint: true
+                });
+
+                // Komprimiere das Bild stärker
+                const imgData = canvas.toDataURL('image/jpeg', 0.85); // JPEG mit 85% Qualität statt PNG
+                const { jsPDF } = window.jspdf;
+                
+                // Berechne PDF-Größe basierend auf Canvas
+                const pdfWidth = canvas.width / 1.5;
+                const pdfHeight = canvas.height / 1.5;
+                
+                const pdf = new jsPDF({
+                    orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+                    unit: 'px',
+                    format: [pdfWidth, pdfHeight],
+                    compress: true  // PDF-Komprimierung aktivieren
+                });
+
+                pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST'); // FAST Kompression
+                pdf.save('MINDNOTE_' + new Date().toISOString().slice(0,10) + '.pdf');
+                
+                closePdfPreview();
+            } catch (error) {
+                alert('Fehler beim PDF-Export: ' + error.message);
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('Möchtest du wirklich alles löschen?')) {
+                nodes.forEach(n => n.element.remove());
+                textFields.forEach(tf => tf.element.remove());
+                nodes = [];
+                textFields = [];
+                connections = [];
+                svg.innerHTML = '';
+                init();
+            }
+        }
+
+        // Start
+        init();
+        drawConnections();
+    </script>
+</body>
+</html>
