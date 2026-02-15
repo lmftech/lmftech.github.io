@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <title>Klick-Challenge</title>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #667eea, #764ba2);
+            color: white;
+            text-align: center;
+            padding: 50px;
+        }
+        
+        .box {
+            background-color: white;
+            color: #333;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            margin: 0 auto;
+        }
+        
+        #timer {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        #zähler {
+            font-size: 36px;
+            font-weight: bold;
+            color: #764ba2;
+        }
+        
+        button {
+            background-color: #667eea;
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            font-size: 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px;
+        }
+        
+        button:hover {
+            background-color: #764ba2;
+            transform: scale(1.05);
+        }
+        
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            font-size: 24px;
+            color: #43e97b;
+            font-weight: bold;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>⚡ Klick-Challenge ⚡</h1>
+        <p>Wie viele Klicks schaffst du in 10 Sekunden?</p>
+        
+        <div id="timer">10</div>
+        <div id="zähler">Klicks: 0</div>
+        
+        <button id="startBtn" onclick="spielStarten()">Spiel Starten</button>
+        <button id="klickBtn" onclick="klicken()" disabled>KLICK MICH!</button>
+        
+        <div id="ergebnis" class="result"></div>
+    </div>
+
+    <script>
+        let anzahlKlicks = 0;
+        let zeitVerbleibend = 10;
+        let spielLäuft = false;
+        let timerInterval;
+        
+        function spielStarten() {
+            // Reset
+            anzahlKlicks = 0;
+            zeitVerbleibend = 10;
+            spielLäuft = true;
+            
+            document.getElementById("zähler").innerHTML = "Klicks: 0";
+            document.getElementById("timer").innerHTML = "10";
+            document.getElementById("ergebnis").innerHTML = "";
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("klickBtn").disabled = false;
+            
+            // Timer starten
+            timerInterval = setInterval(function() {
+                zeitVerbleibend--;
+                document.getElementById("timer").innerHTML = zeitVerbleibend;
+                
+                if (zeitVerbleibend <= 0) {
+                    spielEnde();
+                }
+            }, 1000); // jede Sekunde
+        }
+        
+        function klicken() {
+            if (spielLäuft) {
+                anzahlKlicks++;
+                document.getElementById("zähler").innerHTML = "Klicks: " + anzahlKlicks;
+            }
+        }
+        
+        function spielEnde() {
+            spielLäuft = false;
+            clearInterval(timerInterval);
+            document.getElementById("klickBtn").disabled = true;
+            document.getElementById("startBtn").disabled = false;
+            
+            let nachricht = "";
+            if (anzahlKlicks < 30) {
+                nachricht = "😴 " + anzahlKlicks + " Klicks - Nicht schlecht!";
+            } else if (anzahlKlicks < 50) {
+                nachricht = "🔥 " + anzahlKlicks + " Klicks - Gut gemacht!";
+            } else if (anzahlKlicks < 70) {
+                nachricht = "⚡ " + anzahlKlicks + " Klicks - Beeindruckend!";
+            } else {
+                nachricht = "🏆 " + anzahlKlicks + " Klicks - WELTMEISTER!";
+            }
+            
+            document.getElementById("ergebnis").innerHTML = nachricht;
+        }
+    </script>
+</body>
+</html>
